@@ -1,0 +1,20 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { CalendarCheck, CircleDollarSign, GraduationCap, Layers3, LibraryBig, UsersRound } from "lucide-react";
+import { api, ApiRequestError } from "@/lib/api";
+import { ErrorState, LoadingState } from "@/components/admin/AdminStates";
+import { StatCard } from "@/components/admin/StatCard";
+
+interface SchoolDashboard { school: { name: string; code: string }; dashboard: { total_teachers: number; total_students: number; total_parents: number; total_classes: number; total_sections: number; total_subjects: number; active_exams: number; attendance_today: { total_students: number; present: number; absent: number; late: number; excused: number; attendance_percentage: number }; fees: { total_fees: string; total_paid: string; total_due: string } } }
+
+export default function SchoolPage() {
+  const [data, setData] = useState<SchoolDashboard | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState("");
+  const load = useCallback(async () => { setLoading(true); setError(""); try { const result = await api.get<SchoolDashboard>("/school/dashboard"); setData(result); } catch (cause) { setError(cause instanceof ApiRequestError ? cause.message : "Unable to load the school dashboard."); } finally { setLoading(false); } }, []);
+  useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
+  if (loading) return <LoadingState label="Loading school dashboard..." />;
+  if (error) return <ErrorState message={error} onRetry={() => void load()} />;
+  if (!data) return null;
+  const d = data.dashboard; const stats = [{ label: "Students", value: d.total_students, icon: GraduationCap, tone: "coral" as const }, { label: "Teachers", value: d.total_teachers, icon: UsersRound, tone: "mint" as const }, { label: "Classes", value: d.total_classes, icon: Layers3, tone: "gold" as const }, { label: "Subjects", value: d.total_subjects, icon: LibraryBig, tone: "blue" as const }];
+  return <><section className="admin-hero"><div><p className="kicker">School pulse</p><h2>{data.school.name}, in rhythm.</h2><p>{data.school.code} · The important signals are ready when you are.</p></div><div className="admin-hero-mark"><CalendarCheck size={22} /><span>{d.attendance_today.attendance_percentage}% today</span></div></section><section className="admin-stat-grid">{stats.map((stat) => <StatCard key={stat.label} {...stat} />)}</section><section className="school-dashboard-grid"><article className="dashboard-summary-card"><div className="summary-heading"><div><p className="kicker">Attendance today</p><h3>Presence across the school</h3></div><strong>{d.attendance_today.attendance_percentage}%</strong></div><div className="attendance-bars">{[["Present", d.attendance_today.present, "bar-present"], ["Absent", d.attendance_today.absent, "bar-absent"], ["Late", d.attendance_today.late, "bar-late"], ["Excused", d.attendance_today.excused, "bar-excused"]].map(([label, value, tone]) => <div className="attendance-row" key={label as string}><span>{label}</span><div className="bar-track"><i className={tone as string} style={{ width: `${d.attendance_today.total_students ? Math.min(100, (Number(value) / d.attendance_today.total_students) * 100) : 0}%` }} /></div><b>{value}</b></div>)}</div></article><article className="dashboard-summary-card fee-summary"><div className="summary-heading"><div><p className="kicker">Finance</p><h3>Fee position</h3></div><CircleDollarSign size={22} /></div><div className="money-list"><div><span>Total fees</span><strong>{d.fees.total_fees}</strong></div><div><span>Total paid</span><strong>{d.fees.total_paid}</strong></div><div><span>Total due</span><strong className="due-value">{d.fees.total_due}</strong></div></div></article></section><section className="school-mini-grid"><div><span>Parents</span><strong>{d.total_parents}</strong></div><div><span>Sections</span><strong>{d.total_sections}</strong></div><div><span>Active exams</span><strong>{d.active_exams}</strong></div></section></>;
+}

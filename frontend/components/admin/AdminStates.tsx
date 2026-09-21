@@ -1,0 +1,6 @@
+import { AlertCircle, Inbox, LoaderCircle } from "lucide-react";
+
+export function LoadingState({ label = "Loading data..." }: { label?: string }) { return <div className="admin-state admin-loading" role="status" aria-live="polite"><div className="state-skeleton"><i /><i /><i /></div><LoaderCircle className="loading-icon" size={21} /><span>{label}</span></div>; }
+export function EmptyState({ title, copy }: { title: string; copy: string }) { return <div className="admin-state" role="status"><div className="state-icon"><Inbox size={22} /></div><strong>{title}</strong><span>{copy}</span></div>; }
+export function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) { return <div className="admin-state admin-error" role="alert"><div className="state-icon state-icon-error"><AlertCircle size={22} /></div><strong>Unable to load this view</strong><span>{message}</span><button className="secondary-button" onClick={onRetry}>Try again</button></div>; }
+export function Notice({ message, tone = "success" }: { message: string; tone?: "success" | "error" }) { return <div className={`notice notice-${tone}`} role="status">{message}</div>; }

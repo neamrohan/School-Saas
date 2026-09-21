@@ -1,0 +1,3 @@
+import type { ReactNode } from "react";
+
+export function DataTable<T extends { id: number }>({ columns, rows, empty }: { columns: Array<{ label: string; key: string }>; rows: T[]; empty?: ReactNode }) { return <div className="data-table-wrap"><table className="data-table"><thead><tr>{columns.map((column) => <th key={column.key} scope="col">{column.label}</th>)}</tr></thead><tbody>{rows.length ? rows.map((row) => <tr key={row.id}>{columns.map((column) => <td key={`${row.id}-${column.key}`}>{(row as Record<string, ReactNode>)[column.key] ?? "—"}</td>)}</tr>) : <tr><td colSpan={columns.length}>{empty}</td></tr>}</tbody></table></div>; }

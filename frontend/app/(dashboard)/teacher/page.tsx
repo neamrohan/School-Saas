@@ -1,0 +1,2 @@
+export default function TeacherPage() { return <RoleWelcome role="Teacher workspace" title="Your classes, in one clear view." copy="Assignments, attendance, marks, and routine are ready to become daily tools." />; }
+function RoleWelcome({ role, title, copy }: { role: string; title: string; copy: string }) { return <section className="role-welcome"><p className="kicker">{role}</p><h2>{title}</h2><p>{copy}</p><div className="welcome-grid"><span>Assigned classes</span><span>Today&apos;s routine</span><span>Pending marks</span></div></section>; }

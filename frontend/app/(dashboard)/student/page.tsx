@@ -1,0 +1,2 @@
+export default function StudentPage() { return <RoleWelcome role="Student space" title="Everything you need to keep moving." copy="Your classes, attendance, results, routine, and fees will stay close at hand." />; }
+function RoleWelcome({ role, title, copy }: { role: string; title: string; copy: string }) { return <section className="role-welcome"><p className="kicker">{role}</p><h2>{title}</h2><p>{copy}</p><div className="welcome-grid"><span>My classes</span><span>Attendance</span><span>Results</span></div></section>; }

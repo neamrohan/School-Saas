@@ -1,0 +1,3 @@
+import type { LucideIcon } from "lucide-react";
+
+export function StatCard({ label, value, helper, icon: Icon, tone = "coral" }: { label: string; value: number | string; helper?: string; icon: LucideIcon; tone?: "coral" | "mint" | "gold" | "blue" }) { return <article className={`admin-stat-card tone-${tone}`}><div className="admin-stat-icon"><Icon size={19} /></div><span>{label}</span><strong>{value}</strong>{helper && <small>{helper}</small>}</article>; }

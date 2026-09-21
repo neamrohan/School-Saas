@@ -1,0 +1,2 @@
+import { AcademicCrudPage } from "@/components/admin/AcademicCrudPage";
+export default function GroupsPage() { return <AcademicCrudPage title="Groups / Trades" description="Manage academic groups and trade categories." endpoint="groups" responseKey="groups" columns={["name", "code", "type"]} fields={[{ key: "name", label: "Name", required: true }, { key: "code", label: "Code" }, { key: "type", label: "Type" }, { key: "is_active", label: "Active group", type: "checkbox" }]} itemLabel="Group" />; }

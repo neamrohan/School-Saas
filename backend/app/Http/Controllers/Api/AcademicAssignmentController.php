@@ -1,0 +1,22 @@
+<?php
+namespace App\Http\Controllers\Api;
+use App\Http\Controllers\Controller;
+use App\Models\ClassSectionAssignment;
+use App\Models\ClassSubjectAssignment;
+use App\Models\Student;
+use App\Models\Subject;
+use App\Models\SchoolClass;
+use App\Models\Section;
+use App\Models\AcademicYear;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+class AcademicAssignmentController extends Controller {
+    public function sections(Request $request) { return response()->json(['assignments'=>ClassSectionAssignment::with(['schoolClass','section'])->where('school_id',$request->user()->school_id)->latest()->get()]); }
+    public function sectionStore(Request $request) { $data=$request->validate(['school_class_id'=>'required|integer','section_id'=>'required|integer']); $this->sameSchool($request,$data['school_class_id'],$data['section_id']); $record=ClassSectionAssignment::create([...$data,'school_id'=>$request->user()->school_id]); return response()->json(['assignment'=>$record->load(['schoolClass','section'])],201); }
+    public function sectionDestroy(Request $request,int $id) { $record=ClassSectionAssignment::where('school_id',$request->user()->school_id)->findOrFail($id); $record->delete(); return response()->json(['message'=>'Assignment removed successfully.']); }
+    public function subjects(Request $request) { return response()->json(['assignments'=>ClassSubjectAssignment::with(['schoolClass','subject'])->where('school_id',$request->user()->school_id)->latest()->get()]); }
+    public function subjectStore(Request $request) { $data=$request->validate(['school_class_id'=>'required|integer','subject_id'=>'required|integer']); $this->sameSchool($request,$data['school_class_id'],$data['subject_id'], true); $record=ClassSubjectAssignment::create([...$data,'school_id'=>$request->user()->school_id]); return response()->json(['assignment'=>$record->load(['schoolClass','subject'])],201); }
+    public function subjectDestroy(Request $request,int $id) { $record=ClassSubjectAssignment::where('school_id',$request->user()->school_id)->findOrFail($id); $record->delete(); return response()->json(['message'=>'Assignment removed successfully.']); }
+    public function bulkStore(Request $request) { $data=$request->validate(['academic_year_id'=>'nullable|integer','subject_ids'=>'required|array|min:1','subject_ids.*'=>'integer','student_ids'=>'required|array|min:1','student_ids.*'=>'integer']); $school=$request->user()->school_id; $students=Student::where('school_id',$school)->whereIn('id',$data['student_ids'])->pluck('id'); $subjects=Subject::where('school_id',$school)->whereIn('id',$data['subject_ids'])->pluck('id'); if($students->count()!==count($data['student_ids'])||$subjects->count()!==count($data['subject_ids'])) abort(response()->json(['message'=>'All students and subjects must belong to your school.'],422)); if(!empty($data['academic_year_id'])&&!AcademicYear::where('school_id',$school)->whereKey($data['academic_year_id'])->exists()) abort(response()->json(['message'=>'Academic year does not belong to your school.'],422)); $count=0; DB::transaction(function() use($students,$subjects,$data,$school,&$count){ foreach($students as $student){ foreach($subjects as $subject){ $created=\DB::table('student_subject_assignments')->insertOrIgnore(['school_id'=>$school,'student_id'=>$student,'subject_id'=>$subject,'academic_year_id'=>$data['academic_year_id']??null,'created_at'=>now(),'updated_at'=>now()]); $count+=(int)$created; } } }); return response()->json(['message'=>'Student subjects assigned successfully.','created'=>$count]); }
+    private function sameSchool(Request $request,int $classId,int $targetId,bool $subject=false): void { $school=$request->user()->school_id; if(!SchoolClass::where('school_id',$school)->whereKey($classId)->exists()) abort(response()->json(['message'=>'Class does not belong to your school.'],422)); $exists=$subject?Subject::where('school_id',$school)->whereKey($targetId)->exists():Section::whereHas('schoolClass',fn($q)=>$q->where('school_id',$school))->whereKey($targetId)->exists(); if(!$exists) abort(response()->json(['message'=>$subject?'Subject does not belong to your school.':'Section does not belong to your school.'],422)); if(!$subject&&!Section::whereKey($targetId)->where('school_class_id',$classId)->exists()) abort(response()->json(['message'=>'Section does not belong to the selected class.'],422)); }
+}

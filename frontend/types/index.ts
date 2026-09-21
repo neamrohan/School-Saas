@@ -1,0 +1,33 @@
+export type Role = "super_admin" | "school_admin" | "teacher" | "student" | "parent";
+
+export interface SchoolUser { id: number; name: string; email: string; role: Role; school_id?: number | null; }
+export interface School { id: number; name: string; code: string; email?: string | null; phone?: string | null; address?: string | null; logo?: string | null; is_active?: boolean; users?: SchoolUser[]; created_at?: string; }
+export interface User { id: number; name: string; email: string; role: Role; school_id?: number | null; school?: School | null; }
+export interface Teacher { id: number; user_id: number; school_id: number; user?: User; employee_id?: string | null; phone?: string | null; designation?: string | null; qualification?: string | null; joining_date?: string | null; }
+export interface Student { id: number; user_id: number; school_id: number; user?: User; school?: School; student_id?: string | null; phone?: string | null; date_of_birth?: string | null; class_id?: number | null; section_id?: number | null; academic_year_id?: number | null; shift_id?: number | null; version_id?: number | null; group_trade_id?: number | null; is_active?: boolean; class?: SchoolClass | null; section?: Section | null; academicYear?: AcademicYear | null; shift?: Shift | null; version?: Version | null; groupTrade?: GroupTrade | null; gender?: string | null; address?: string | null; blood_group?: string | null; admission_date?: string | null; }
+export interface Parent extends User { children?: Student[]; }
+export interface SchoolClass { id: number; school_id: number; name: string; code?: string | null; numeric_order?: number | null; is_active?: boolean; sections?: Section[]; }
+export interface Shift { id: number; school_id: number; name: string; code?: string | null; start_time?: string | null; end_time?: string | null; is_active?: boolean; }
+export interface Version { id: number; school_id: number; name: string; is_active?: boolean; }
+export interface AcademicYear { id: number; school_id: number; name: string; start_date?: string | null; end_date?: string | null; is_current?: boolean; is_active?: boolean; }
+export interface GroupTrade { id: number; school_id: number; name: string; code?: string | null; type?: string | null; is_active?: boolean; }
+export interface Transport { id: number; school_id: number; name: string; route?: string | null; vehicle_number?: string | null; driver_name?: string | null; driver_phone?: string | null; capacity?: number | null; is_active?: boolean; }
+export interface RoutinePeriod { id: number; school_id: number; name: string; start_time: string; end_time: string; display_order?: number | null; is_active?: boolean; }
+export interface RoutineRoom { id: number; school_id: number; name: string; code?: string | null; capacity?: number | null; is_active?: boolean; }
+export interface ClassSectionAssignment { id: number; school_id: number; school_class_id: number; section_id: number; schoolClass?: SchoolClass; section?: Section; }
+export interface ClassSubjectAssignment { id: number; school_id: number; school_class_id: number; subject_id: number; schoolClass?: SchoolClass; subject?: Subject; }
+export interface Section { id: number; school_class_id: number; name: string; is_active?: boolean; schoolClass?: SchoolClass | null; }
+export interface Subject { id: number; school_id: number; name: string; code: string; description?: string | null; is_active?: boolean; }
+export interface TeacherAssignment { id: number; school_id: number; teacher_id: number; class_id: number; section_id: number; subject_id: number; teacher?: Teacher; class?: SchoolClass; section?: Section; subject?: Subject; }
+export interface Attendance { id: number; school_id: number; student_id: number; class_id: number; section_id: number; date: string; status: "present" | "absent" | "late" | "excused"; remarks?: string | null; student?: Student; class?: SchoolClass; section?: Section; }
+export interface Exam { id: number; school_id: number; academic_year_id?: number | null; class_id?: number | null; name: string; code?: string | null; start_date?: string | null; end_date?: string | null; description?: string | null; is_active: boolean; academicYear?: AcademicYear; class?: SchoolClass; examSubjects?: ExamSubject[]; }
+export interface ExamSubject { id: number; school_id: number; exam_id: number; subject_id: number; full_marks: string; pass_marks: string; exam?: Exam; subject?: Subject; }
+export interface Mark { id: number; school_id: number; exam_subject_id: number; student_id: number; marks: string; grade?: string | null; grade_point?: string | null; student?: Student; examSubject?: ExamSubject; }
+export interface Result { student: Student; exam: Exam; subjects: Array<{ subject: Subject; full_marks: number; pass_marks: number; obtained_marks: number | null; grade?: string | null; grade_point?: number | null; passed: boolean }>; total_marks: number; obtained_marks: number; average?: number; percentage: number; overall_gpa: number | null; passed: boolean; }
+export interface Routine { id: number; school_id: number; academic_year_id?: number | null; shift_id?: number | null; period_id?: number | null; room_id?: number | null; class_id: number; section_id: number; subject_id: number; teacher_id: number; day_of_week: string; start_time: string; end_time: string; room?: string | null; is_active: boolean; class?: SchoolClass; section?: Section; subject?: Subject; teacher?: Teacher; }
+export interface FeeType { id: number; school_id: number; name: string; amount: string; description?: string | null; is_active: boolean; }
+export interface StudentFee { id: number; school_id: number; student_id: number; fee_type_id: number; amount: string; due_date?: string | null; status: "unpaid" | "partial" | "paid" | "waived"; student?: Student; feeType?: FeeType; payments?: Payment[]; }
+export interface Payment { id: number; school_id: number; student_fee_id: number; student_id: number; amount: string; payment_date: string; payment_method: string; transaction_reference?: string | null; }
+
+export interface ApiError { message: string; errors?: Record<string, string[]>; }
+export interface SuperAdminDashboard { total_schools: number; active_schools: number; inactive_schools: number; total_users: number; total_teachers: number; total_students: number; total_parents: number; schools: Array<{ id: number; name: string; code?: string; student_count: number; teacher_count: number; is_active: boolean }>; }

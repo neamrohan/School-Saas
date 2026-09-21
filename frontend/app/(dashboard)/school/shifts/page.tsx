@@ -1,0 +1,83 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { api, ApiRequestError } from "@/lib/api";
+import { ShiftForm, type ShiftFormValues } from "@/components/admin/ShiftForm";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { DataTable } from "@/components/admin/DataTable";
+import { EmptyState, ErrorState, LoadingState, Notice } from "@/components/admin/AdminStates";
+import type { Shift } from "@/types";
+
+export default function ShiftsPage() {
+  const [items, setItems] = useState<Shift[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selected, setSelected] = useState<Shift | null>(null);
+  const [confirm, setConfirm] = useState<Shift | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [modal, setModal] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string[]> | undefined>();
+  const [notice, setNotice] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const result = await api.get<{ shifts: Shift[] }>("/shifts");
+      setItems(result.shifts);
+    } catch (cause) {
+      setError(cause instanceof ApiRequestError ? cause.message : "Unable to load shifts.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
+
+  const filtered = useMemo(() => items.filter((item) => {
+    const query = search.toLowerCase();
+    return !query || item.name.toLowerCase().includes(query) || item.code?.toLowerCase().includes(query);
+  }), [items, search]);
+
+  async function save(values: ShiftFormValues) {
+    setBusy(true);
+    setErrors(undefined);
+    try {
+      const result = selected
+        ? await api.put<{ shift: Shift }>(`/shifts/${selected.id}`, values)
+        : await api.post<{ shift: Shift }>("/shifts", values);
+      setItems((current) => selected ? current.map((item) => item.id === selected.id ? result.shift : item) : [result.shift, ...current]);
+      setModal(false);
+      setNotice(selected ? "Shift updated successfully." : "Shift added successfully.");
+    } catch (cause) {
+      setErrors({ ...(cause instanceof ApiRequestError ? cause.details?.errors : {}), _form: [cause instanceof ApiRequestError ? cause.message : "Unable to save shift."] });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    if (!confirm) return;
+    setBusy(true);
+    try {
+      await api.delete(`/shifts/${confirm.id}`);
+      setItems((current) => current.filter((item) => item.id !== confirm.id));
+      setConfirm(null);
+      setNotice("Shift deleted successfully.");
+    } catch (cause) {
+      setNotice(cause instanceof ApiRequestError ? cause.message : "Unable to delete shift.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (loading) return <LoadingState label="Loading shifts..." />;
+  if (error) return <ErrorState message={error} onRetry={() => void load()} />;
+
+  return <><section className="admin-page-heading"><div><p className="kicker">Academic setup</p><h2>Shifts</h2><p>Manage the school-day shifts used by your school.</p></div><button className="primary-button compact-button" onClick={() => { setSelected(null); setErrors(undefined); setModal(true); }}><Plus size={17} />Add shift</button></section>{notice && <Notice message={notice} />}<section className="list-card"><div className="list-toolbar"><label className="search-input"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search shift name or code" aria-label="Search shifts" /></label></div>{filtered.length ? <DataTable columns={[{ label: "Shift", key: "name" }, { label: "Code", key: "code" }, { label: "Time", key: "time" }, { label: "Status", key: "status" }, { label: "Actions", key: "actions" }]} rows={filtered.map((item) => ({ ...item, name: <strong>{item.name}</strong>, code: <span className="code-text">{item.code || "—"}</span>, time: item.start_time || item.end_time ? `${item.start_time?.slice(0, 5) || "—"} - ${item.end_time?.slice(0, 5) || "—"}` : "—", status: <span className={`status-badge ${item.is_active === false ? "status-inactive" : "status-active"}`}>{item.is_active === false ? "Inactive" : "Active"}</span>, actions: <div className="row-actions"><button onClick={() => { setSelected(item); setErrors(undefined); setModal(true); }} aria-label={`Edit ${item.name}`}><Pencil size={16} /></button><button className="row-danger" onClick={() => setConfirm(item)} aria-label={`Delete ${item.name}`}><Trash2 size={16} /></button></div> }))} /> : <EmptyState title="No shifts found" copy={items.length ? "Try a different search." : "Add your first shift to begin."} />}</section>{modal && <div className="dialog-backdrop"><div className="form-dialog"><div className="dialog-header"><p className="kicker">{selected ? "Edit record" : "New record"}</p><h2>{selected ? "Edit shift" : "Add a shift"}</h2></div><ShiftForm shift={selected} busy={busy} errors={errors} onSubmit={save} onCancel={() => setModal(false)} /></div></div>}{confirm && <ConfirmDialog title={`Delete ${confirm.name}?`} copy="Shifts used by related records may be rejected by backend relationships." busy={busy} onCancel={() => setConfirm(null)} onConfirm={() => void remove()} />}</>;
+}

@@ -1,0 +1,2 @@
+export default function ParentPage() { return <RoleWelcome role="Family view" title="A closer view of their school life." copy="See the people, progress, and practical details that matter to your family." />; }
+function RoleWelcome({ role, title, copy }: { role: string; title: string; copy: string }) { return <section className="role-welcome"><p className="kicker">{role}</p><h2>{title}</h2><p>{copy}</p><div className="welcome-grid"><span>My children</span><span>Progress</span><span>Fees</span></div></section>; }

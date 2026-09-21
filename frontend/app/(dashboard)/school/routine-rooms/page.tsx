@@ -1,0 +1,2 @@
+import { AcademicCrudPage } from "@/components/admin/AcademicCrudPage";
+export default function RoutineRoomsPage() { return <AcademicCrudPage title="Class Routine Rooms" description="Manage rooms available for class routines." endpoint="routine-rooms" responseKey="routine_rooms" columns={["name", "code", "capacity"]} fields={[{ key: "name", label: "Room name", required: true }, { key: "code", label: "Code" }, { key: "capacity", label: "Capacity", type: "number" }, { key: "is_active", label: "Active room", type: "checkbox" }]} itemLabel="Routine room" />; }
