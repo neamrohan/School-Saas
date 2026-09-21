@@ -1,4 +1,3 @@
-
 <?php
 
 use Illuminate\Foundation\Application;
@@ -15,6 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->api(prepend: \Illuminate\Http\Middleware\HandleCors::class);
+
         $middleware->redirectGuestsTo(
             fn (Request $request) => $request->is('api/*') ? null : route('login'),
         );
@@ -37,4 +38,3 @@ return Application::configure(basePath: dirname(__DIR__))
         );
     })
     ->create();
-
