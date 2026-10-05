@@ -19,6 +19,7 @@ class Teacher extends Model
         'designation',
         'qualification',
         'joining_date',
+        'profile_photo_path',
     ];
 
     protected $casts = [

@@ -9,15 +9,19 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->foreignId('school_id')
-                ->nullable()
-                ->after('id')
-                ->constrained('schools')
-                ->nullOnDelete();
+            if (! Schema::hasColumn('users', 'school_id')) {
+                $table->foreignId('school_id')
+                    ->nullable()
+                    ->after('id')
+                    ->constrained('schools')
+                    ->nullOnDelete();
+            }
 
-            $table->string('role')
-                ->default('student')
-                ->after('school_id');
+            if (! Schema::hasColumn('users', 'role')) {
+                $table->string('role')
+                    ->default('student')
+                    ->after('school_id');
+            }
         });
     }
 

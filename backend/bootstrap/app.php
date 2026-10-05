@@ -1,9 +1,14 @@
 <?php
 
+use App\Http\Middleware\EnsureActiveAccount;
+use App\Http\Middleware\SchoolAccessMiddleware;
+use App\Http\Middleware\SchoolAdminMiddleware;
+use App\Http\Middleware\SuperAdminMiddleware;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Auth\AuthenticationException;
+use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -14,16 +19,17 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->api(prepend: \Illuminate\Http\Middleware\HandleCors::class);
+        $middleware->api(prepend: HandleCors::class);
 
         $middleware->redirectGuestsTo(
             fn (Request $request) => $request->is('api/*') ? null : route('login'),
         );
 
         $middleware->alias([
-            'super_admin' => \App\Http\Middleware\SuperAdminMiddleware::class,
-            'school_access' => \App\Http\Middleware\SchoolAccessMiddleware::class,
-            'school_admin' => \App\Http\Middleware\SchoolAdminMiddleware::class,
+            'super_admin' => SuperAdminMiddleware::class,
+            'school_access' => SchoolAccessMiddleware::class,
+            'school_admin' => SchoolAdminMiddleware::class,
+            'active_account' => EnsureActiveAccount::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

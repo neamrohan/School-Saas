@@ -1,41 +1,54 @@
 <?php
 
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\AttendanceController;
-use App\Http\Controllers\Api\AcademicSupportController;
 use App\Http\Controllers\Api\AcademicAssignmentController;
+use App\Http\Controllers\Api\AcademicSupportController;
+use App\Http\Controllers\Api\AccountProfileController;
+use App\Http\Controllers\Api\AttendanceController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\ExamController;
 use App\Http\Controllers\Api\ExamSubjectController;
-use App\Http\Controllers\Api\FeeTypeController;
-use App\Http\Controllers\Api\DashboardController;
-use App\Http\Controllers\Api\MarkController;
 use App\Http\Controllers\Api\FeeManagementController;
+use App\Http\Controllers\Api\FeeTypeController;
+use App\Http\Controllers\Api\MarkController;
 use App\Http\Controllers\Api\ParentController;
 use App\Http\Controllers\Api\PaymentController;
-use App\Http\Controllers\Api\RoutineController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\RoutineController;
 use App\Http\Controllers\Api\SchoolClassController;
 use App\Http\Controllers\Api\SchoolController;
 use App\Http\Controllers\Api\SectionController;
 use App\Http\Controllers\Api\ShiftController;
 use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\StudentFeeController;
+use App\Http\Controllers\Api\StudentPortalController;
 use App\Http\Controllers\Api\SubjectController;
-use App\Http\Controllers\Api\TeacherController;
 use App\Http\Controllers\Api\TeacherAssignmentController;
+use App\Http\Controllers\Api\TeacherController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'active_account'])->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', function (Request $request) {
         return response()->json([
             'user' => $request->user()->load('school'),
         ]);
+    });
+
+    Route::get('/me/profile', [AccountProfileController::class, 'show']);
+    Route::patch('/me/profile', [AccountProfileController::class, 'update']);
+    Route::put('/me/password', [AccountProfileController::class, 'updatePassword']);
+    Route::prefix('student-portal')->group(function (): void {
+        Route::get('/classes', [StudentPortalController::class, 'classes']);
+        Route::get('/attendance', [StudentPortalController::class, 'attendance']);
+        Route::get('/results', [StudentPortalController::class, 'results']);
+        Route::get('/routine', [StudentPortalController::class, 'routine']);
+        Route::get('/fees', [StudentPortalController::class, 'fees']);
     });
 
     /*
@@ -60,10 +73,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/school/dashboard', [DashboardController::class, 'school'])
             ->middleware('school_admin');
 
-        Route::get('/reports/students', [ReportController::class, 'students']);
-        Route::get('/reports/attendance', [ReportController::class, 'attendance']);
-        Route::get('/reports/fees', [ReportController::class, 'fees']);
-        Route::get('/reports/results', [ReportController::class, 'results']);
+        Route::get('/reports/students', [ReportController::class, 'students'])->middleware('school_admin');
+        Route::get('/reports/attendance', [ReportController::class, 'attendance'])->middleware('school_admin');
+        Route::get('/reports/fees', [ReportController::class, 'fees'])->middleware('school_admin');
+        Route::get('/reports/results', [ReportController::class, 'results'])->middleware('school_admin');
 
         // Attendance Management
         Route::get('/attendance/students', [AttendanceController::class, 'students']);
@@ -78,8 +91,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/students/{student}/results/{exam}', [MarkController::class, 'result']);
 
         // Fees and Payments Management
-        Route::apiResource('student-fees', StudentFeeController::class);
-        Route::get('/students/{student}/fees/summary', [PaymentController::class, 'summary']);
+        Route::apiResource('student-fees', StudentFeeController::class)->middleware('school_admin');
+        Route::get('/students/{student}/fees/summary', [PaymentController::class, 'summary'])->middleware('school_admin');
 
         // Routine viewing is available to authenticated school users.
         Route::get('/routines', [RoutineController::class, 'index'])->name('routines.index');

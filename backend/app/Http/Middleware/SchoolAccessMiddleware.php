@@ -18,6 +18,12 @@ class SchoolAccessMiddleware
             ], 403);
         }
 
+        if ($user->role === 'student') {
+            return response()->json([
+                'message' => 'Student access is limited to personal profile data.',
+            ], 403);
+        }
+
         return $next($request);
     }
 }

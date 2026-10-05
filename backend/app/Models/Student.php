@@ -22,6 +22,7 @@ class Student extends Model
         'version_id',
         'group_trade_id',
         'student_id',
+        'roll',
         'phone',
         'date_of_birth',
         'gender',
@@ -29,6 +30,7 @@ class Student extends Model
         'blood_group',
         'admission_date',
         'is_active',
+        'profile_photo_path',
     ];
 
     protected $casts = [
@@ -97,6 +99,13 @@ class Student extends Model
         return $this->hasMany(Mark::class);
     }
 
-    public function studentFees(): HasMany { return $this->hasMany(StudentFee::class); }
-    public function payments(): HasMany { return $this->hasMany(Payment::class); }
+    public function studentFees(): HasMany
+    {
+        return $this->hasMany(StudentFee::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
 }
