@@ -58,8 +58,17 @@ class MarkController extends Controller
             abort(response()->json(['message' => 'Exam subject does not belong to the selected class.'], 422));
         }
         $this->validateClassSection($request, (int) $data['class_id'], (int) $data['section_id']);
+        $this->ensureTeacherAssignment(
+            $request,
+            (int) $data['class_id'],
+            (int) $data['section_id'],
+            (int) $examSubject->subject_id,
+        );
         $students = Student::with('user')->where('school_id', $request->user()->school_id)
             ->where('class_id', $data['class_id'])->where('section_id', $data['section_id'])->get();
+        foreach ($students as $student) {
+            $this->ensureManageAccess($request, $student, $examSubject);
+        }
         $marks = Mark::where('school_id', $request->user()->school_id)
             ->where('exam_subject_id', $examSubject->id)->whereIn('student_id', $students->pluck('id'))->get()->keyBy('student_id');
         return response()->json(['exam_subject' => $examSubject->load('subject'), 'students' => $students->map(fn ($student) => ['student' => $student, 'mark' => $marks->get($student->id)])]);
@@ -80,6 +89,12 @@ class MarkController extends Controller
             abort(response()->json(['message' => 'Exam subject does not belong to the selected class.'], 422));
         }
         $this->validateClassSection($request, (int) $data['class_id'], (int) $data['section_id']);
+        $this->ensureTeacherAssignment(
+            $request,
+            (int) $data['class_id'],
+            (int) $data['section_id'],
+            (int) $examSubject->subject_id,
+        );
         $students = Student::where('school_id', $request->user()->school_id)
             ->where('class_id', $data['class_id'])->where('section_id', $data['section_id'])
             ->whereIn('id', collect($data['records'])->pluck('student_id'))->get()->keyBy('id');
@@ -360,6 +375,30 @@ class MarkController extends Controller
             return;
         }
 
+        if (! $student->class_id || ! $student->section_id) {
+            abort(response()->json([
+                'message' => 'Student must belong to a class and section.',
+            ], 422));
+        }
+
+        $this->ensureTeacherAssignment(
+            $request,
+            $student->class_id,
+            $student->section_id,
+            $examSubject->subject_id,
+        );
+    }
+
+    private function ensureTeacherAssignment(
+        Request $request,
+        int $classId,
+        int $sectionId,
+        int $subjectId,
+    ): void {
+        if ($request->user()->role === 'school_admin') {
+            return;
+        }
+
         if ($request->user()->role !== 'teacher') {
             abort(response()->json([
                 'message' => 'Mark management access required.',
@@ -372,9 +411,9 @@ class MarkController extends Controller
 
         if (! $teacher || ! TeacherAssignment::where('school_id', $request->user()->school_id)
             ->where('teacher_id', $teacher->id)
-            ->where('class_id', $student->class_id)
-            ->where('section_id', $student->section_id)
-            ->where('subject_id', $examSubject->subject_id)
+            ->where('class_id', $classId)
+            ->where('section_id', $sectionId)
+            ->where('subject_id', $subjectId)
             ->exists()) {
             $this->abortUnauthorizedSchoolAccess();
         }

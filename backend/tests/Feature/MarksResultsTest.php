@@ -125,6 +125,43 @@ class MarksResultsTest extends TestCase
             ->assertCreated();
     }
 
+    public function test_teacher_portal_returns_assigned_subjects_and_exams(): void
+    {
+        $scenario = $this->scenario();
+        $scenario['exam']->update(['class_id' => $scenario['class']->id]);
+        $examSubject = $this->examSubject($scenario);
+        $assignment = $this->assignTeacher($scenario, $examSubject);
+
+        $this->actingAs($scenario['teacherUser'], 'sanctum')
+            ->getJson('/api/teacher/assignments')
+            ->assertOk()
+            ->assertJsonCount(1, 'assignments')
+            ->assertJsonPath('assignments.0.id', $assignment->id)
+            ->assertJsonPath('assignments.0.subject.id', $scenario['subject']->id);
+
+        $this->getJson('/api/teacher/exam-subjects')
+            ->assertOk()
+            ->assertJsonCount(1, 'exam_subjects')
+            ->assertJsonPath('exam_subjects.0.id', $examSubject->id);
+
+        $this->getJson('/api/marks/students?exam_subject_id='.$examSubject->id.'&class_id='.$scenario['class']->id.'&section_id='.$scenario['section']->id)
+            ->assertOk()
+            ->assertJsonCount(1, 'students');
+    }
+
+    public function test_teacher_cannot_read_marks_roster_for_an_unassigned_subject(): void
+    {
+        $scenario = $this->scenario();
+        $scenario['exam']->update(['class_id' => $scenario['class']->id]);
+        $examSubject = $this->examSubject($scenario);
+        $scenario['student']->delete();
+
+        $this->actingAs($scenario['teacherUser'], 'sanctum')
+            ->getJson('/api/marks/students?exam_subject_id='.$examSubject->id.'&class_id='.$scenario['class']->id.'&section_id='.$scenario['section']->id)
+            ->assertStatus(403)
+            ->assertJsonPath('message', 'Unauthorized school access.');
+    }
+
     public function test_unassigned_teacher_cannot_manage_marks(): void
     {
         $scenario = $this->scenario();

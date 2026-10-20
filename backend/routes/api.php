@@ -16,7 +16,10 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\RoutineController;
 use App\Http\Controllers\Api\SchoolClassController;
+use App\Http\Controllers\Api\SchoolContactMessageController;
 use App\Http\Controllers\Api\SchoolController;
+use App\Http\Controllers\Api\SchoolHomepageSliderController;
+use App\Http\Controllers\Api\SchoolWebsiteSettingsController;
 use App\Http\Controllers\Api\SectionController;
 use App\Http\Controllers\Api\ShiftController;
 use App\Http\Controllers\Api\StudentController;
@@ -25,11 +28,17 @@ use App\Http\Controllers\Api\StudentPortalController;
 use App\Http\Controllers\Api\SubjectController;
 use App\Http\Controllers\Api\TeacherAssignmentController;
 use App\Http\Controllers\Api\TeacherController;
+use App\Http\Controllers\Api\TeacherPortalController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::get('/public/default-school', [SchoolWebsiteSettingsController::class, 'defaultPublicSchool']);
+Route::get('/public/schools', [SchoolWebsiteSettingsController::class, 'publicSchools']);
+Route::get('/public/schools/{schoolCode}/website', [SchoolWebsiteSettingsController::class, 'showPublic']);
+Route::get('/public/schools/{schoolCode}/sliders', [SchoolHomepageSliderController::class, 'publicForSchool']);
+Route::post('/public/schools/{schoolCode}/contact', [SchoolContactMessageController::class, 'storePublic'])->middleware('throttle:5,1');
 
 Route::middleware(['auth:sanctum', 'active_account'])->group(function () {
 
@@ -58,6 +67,23 @@ Route::middleware(['auth:sanctum', 'active_account'])->group(function () {
     */
 
     Route::middleware('super_admin')->group(function () {
+        Route::get('/schools/{school}/website-settings', [SchoolWebsiteSettingsController::class, 'showForAdmin']);
+        Route::post('/schools/{school}/website-settings', [SchoolWebsiteSettingsController::class, 'update']);
+        Route::prefix('/schools/{school}/sliders')->group(function (): void {
+            Route::get('/', [SchoolHomepageSliderController::class, 'index']);
+            Route::post('/', [SchoolHomepageSliderController::class, 'store']);
+            Route::put('/reorder', [SchoolHomepageSliderController::class, 'reorder']);
+            Route::get('/{slider}', [SchoolHomepageSliderController::class, 'show']);
+            Route::put('/{slider}', [SchoolHomepageSliderController::class, 'update']);
+            Route::delete('/{slider}', [SchoolHomepageSliderController::class, 'destroy']);
+        });
+        Route::prefix('/schools/{school}/contact-messages')->group(function (): void {
+            Route::get('/', [SchoolContactMessageController::class, 'index']);
+            Route::patch('/{message}/read', [SchoolContactMessageController::class, 'markRead']);
+            Route::delete('/{message}', [SchoolContactMessageController::class, 'destroy']);
+        });
+        Route::get('/schools/deleted', [SchoolController::class, 'deleted']);
+        Route::post('/schools/{school}/restore', [SchoolController::class, 'restore']);
         Route::apiResource('schools', SchoolController::class);
         Route::get('/super-admin/dashboard', [DashboardController::class, 'superAdmin']);
     });
@@ -70,8 +96,29 @@ Route::middleware(['auth:sanctum', 'active_account'])->group(function () {
 
     Route::middleware('school_access')->group(function () {
 
+        Route::prefix('teacher')->group(function (): void {
+            Route::get('/assignments', [TeacherPortalController::class, 'assignments']);
+            Route::get('/exam-subjects', [TeacherPortalController::class, 'examSubjects']);
+            Route::get('/routines', [TeacherPortalController::class, 'routines']);
+        });
+
         Route::get('/school/dashboard', [DashboardController::class, 'school'])
             ->middleware('school_admin');
+        Route::get('/school/website-settings', [SchoolWebsiteSettingsController::class, 'showForAdmin'])
+            ->middleware('school_admin');
+        Route::post('/school/website-settings', [SchoolWebsiteSettingsController::class, 'update'])
+            ->middleware('school_admin');
+        Route::get('/school/contact-messages', [SchoolContactMessageController::class, 'index'])->middleware('school_admin');
+        Route::patch('/school/contact-messages/{message}/read', [SchoolContactMessageController::class, 'markRead'])->middleware('school_admin');
+        Route::delete('/school/contact-messages/{message}', [SchoolContactMessageController::class, 'destroy'])->middleware('school_admin');
+        Route::prefix('school/sliders')->middleware('school_admin')->group(function (): void {
+            Route::get('/', [SchoolHomepageSliderController::class, 'index']);
+            Route::post('/', [SchoolHomepageSliderController::class, 'store']);
+            Route::put('/reorder', [SchoolHomepageSliderController::class, 'reorder']);
+            Route::get('/{slider}', [SchoolHomepageSliderController::class, 'show']);
+            Route::put('/{slider}', [SchoolHomepageSliderController::class, 'update']);
+            Route::delete('/{slider}', [SchoolHomepageSliderController::class, 'destroy']);
+        });
 
         Route::get('/reports/students', [ReportController::class, 'students'])->middleware('school_admin');
         Route::get('/reports/attendance', [ReportController::class, 'attendance'])->middleware('school_admin');

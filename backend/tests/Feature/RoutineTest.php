@@ -178,6 +178,20 @@ class RoutineTest extends TestCase
             ->assertJsonCount(1, 'routines');
     }
 
+    public function test_teacher_portal_only_returns_the_teacher_own_routine(): void
+    {
+        $scenario = $this->scenario();
+        $ownRoutine = $this->createRoutine($scenario);
+        $otherTeacher = $this->scenarioForExistingSchool($scenario['school']);
+        $this->createRoutine($otherTeacher);
+
+        $this->actingAs($scenario['teacherUser'], 'sanctum')
+            ->getJson('/api/teacher/routines')
+            ->assertOk()
+            ->assertJsonCount(1, 'routines')
+            ->assertJsonPath('routines.0.id', $ownRoutine->id);
+    }
+
     private function scenario(bool $withAssignment = true): array
     {
         $school = School::create([

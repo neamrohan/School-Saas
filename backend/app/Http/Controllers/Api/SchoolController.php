@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\School;
 use App\Models\User;
+use App\Services\DemoSchoolWebsiteTemplate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class SchoolController extends Controller
@@ -21,6 +23,16 @@ class SchoolController extends Controller
 
         return response()->json([
             'schools' => $schools,
+        ]);
+    }
+
+    /**
+     * Display schools that have been removed.
+     */
+    public function deleted()
+    {
+        return response()->json([
+            'schools' => School::onlyTrashed()->latest('deleted_at')->get(),
         ]);
     }
 
@@ -60,6 +72,8 @@ class SchoolController extends Controller
                 'school_id' => $school->id,
                 'role' => 'school_admin',
             ]);
+
+            app(DemoSchoolWebsiteTemplate::class)->initialize($school);
 
             return [$school, $admin->makeHidden(['password', 'remember_token'])];
         });
@@ -115,10 +129,38 @@ class SchoolController extends Controller
      */
     public function destroy(School $school)
     {
-        $school->delete();
+        DB::transaction(function () use ($school): void {
+            $users = $school->users()->where('role', '!=', 'super_admin')->get();
+
+            foreach ($users as $user) {
+                $user->tokens()->delete();
+            }
+
+            if (config('session.driver') === 'database' && Schema::hasTable(config('session.table', 'sessions'))) {
+                DB::table(config('session.table', 'sessions'))
+                    ->whereIn('user_id', $users->modelKeys())
+                    ->delete();
+            }
+
+            $school->delete();
+        });
 
         return response()->json([
-            'message' => 'School deleted successfully.',
+            'message' => 'School removed successfully.',
+        ]);
+    }
+
+    /**
+     * Restore a removed school.
+     */
+    public function restore(int $school)
+    {
+        $school = School::onlyTrashed()->findOrFail($school);
+        $school->restore();
+
+        return response()->json([
+            'message' => 'School restored successfully.',
+            'school' => $school->fresh(),
         ]);
     }
 }

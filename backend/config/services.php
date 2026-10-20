@@ -18,6 +18,8 @@ return [
         'key' => env('POSTMARK_API_KEY'),
     ],
 
+    'public_default_school_code' => env('PUBLIC_DEFAULT_SCHOOL_CODE'),
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],

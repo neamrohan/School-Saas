@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { BarChart3, BookOpen, CalendarDays, ChevronRight, CreditCard, GraduationCap, LayoutDashboard, LogOut, Menu, School, Users, X } from "lucide-react";
+import { BarChart3, BookOpen, CalendarDays, ChevronRight, CreditCard, Globe2, GraduationCap, LayoutDashboard, LogOut, Menu, School, Users, X } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import type { Role } from "@/types";
 
@@ -13,6 +13,11 @@ const nav: Record<Role, NavEntry[]> = {
   super_admin: [{ label: "Dashboard", href: "/super-admin", icon: LayoutDashboard }, { label: "Schools", href: "/super-admin/schools", icon: School }, { label: "Users", href: "/super-admin/users", icon: Users }, { label: "Reports", href: "/super-admin/reports", icon: BarChart3 }, { label: "Profile", href: "/profile", icon: GraduationCap }],
   school_admin: [
     { label: "Dashboard", href: "/school", icon: LayoutDashboard },
+    { label: "Website Management", icon: Globe2, children: [
+      { label: "Website Settings", href: "/school/website-settings" },
+      { label: "Homepage Slider", href: "/school/website-management/sliders" },
+      { label: "Contact messages", href: "/school/website-management/contact-messages" },
+    ] },
     { label: "Teachers", href: "/school/teachers", icon: Users },
     { label: "Students", href: "/school/students", icon: GraduationCap },
     { label: "Parents", href: "/school/parents", icon: Users },
@@ -55,14 +60,14 @@ const nav: Record<Role, NavEntry[]> = {
     { label: "Reports", href: "/school/reports", icon: BarChart3 },
     { label: "Profile", href: "/profile", icon: GraduationCap },
   ],
-  teacher: [{ label: "Dashboard", href: "/teacher", icon: LayoutDashboard }, { label: "My Classes", href: "/teacher/classes", icon: School }, { label: "My Subjects", href: "/teacher/subjects", icon: BookOpen }, { label: "Attendance", href: "/teacher/attendance", icon: CalendarDays }, { label: "Marks", href: "/teacher/marks", icon: BarChart3 }, { label: "Routine", href: "/teacher/routine", icon: CalendarDays }, { label: "Profile", href: "/profile", icon: GraduationCap }],
+  teacher: [{ label: "Dashboard", href: "/teacher", icon: LayoutDashboard }, { label: "My Classes", href: "/teacher/classes", icon: School }, { label: "My Subjects", href: "/teacher/subjects", icon: BookOpen }, { label: "Attendance", href: "/teacher/attendance", icon: CalendarDays }, { label: "Marks", href: "/teacher/marks", icon: BarChart3 }, { label: "Routine", href: "/teacher/routine", icon: CalendarDays }, { label: "Profile", href: "/teacher/profile", icon: GraduationCap }],
   student: [{ label: "Dashboard", href: "/student", icon: LayoutDashboard }, { label: "My Profile", href: "/student/profile", icon: GraduationCap }, { label: "My Classes", href: "/student/classes", icon: School }, { label: "Attendance", href: "/student/attendance", icon: CalendarDays }, { label: "Exams & Results", href: "/student/results", icon: BarChart3 }, { label: "Routine", href: "/student/routine", icon: CalendarDays }, { label: "Fees", href: "/student/fees", icon: CreditCard }],
   parent: [{ label: "Dashboard", href: "/parent", icon: LayoutDashboard }, { label: "My Children", href: "/parent/children", icon: Users }, { label: "Attendance", href: "/parent/attendance", icon: CalendarDays }, { label: "Results", href: "/parent/results", icon: BarChart3 }, { label: "Routine", href: "/parent/routine", icon: CalendarDays }, { label: "Fees", href: "/parent/fees", icon: CreditCard }, { label: "Profile", href: "/profile", icon: GraduationCap }],
 };
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth(); const router = useRouter(); const pathname = usePathname(); const searchParams = useSearchParams(); const [open, setOpen] = useState(false);
-  const [sections, setSections] = useState<Record<string, boolean>>({ Academics: true, "Fees & Payments": true });
+  const [sections, setSections] = useState<Record<string, boolean>>({ Academics: true, "Fees & Payments": true, "Website Management": true });
   if (!user) return null;
   const items = nav[user.role];
   const currentQuery = searchParams.toString();

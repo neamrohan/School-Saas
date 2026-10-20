@@ -23,7 +23,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
   if (!response.ok) {
     const details = isApiError(body) ? body : undefined;
-    if ((response.status === 401 || details?.code === "account_inactive") && typeof window !== "undefined") window.dispatchEvent(new Event("school-saas:unauthorized"));
+    if ((response.status === 401 || details?.code === "account_inactive" || details?.code === "school_unavailable") && typeof window !== "undefined") window.dispatchEvent(new Event("school-saas:unauthorized"));
     throw new ApiRequestError(details?.message ?? "Something went wrong.", response.status, details);
   }
   return body as T;

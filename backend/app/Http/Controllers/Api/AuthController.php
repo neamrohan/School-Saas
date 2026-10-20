@@ -39,6 +39,13 @@ class AuthController extends Controller
             ], 403);
         }
 
+        if ($user->role !== 'super_admin' && $user->school_id && ! $user->school()->exists()) {
+            return response()->json([
+                'message' => 'Your school is unavailable. Please contact your Super Admin.',
+                'code' => 'school_unavailable',
+            ], 403);
+        }
+
         if (isset($credentials['role']) && $user->role !== $credentials['role']) {
             return response()->json([
                 'message' => 'This account does not belong to the selected login type.',

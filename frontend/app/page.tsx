@@ -1,14 +1,12 @@
-"use client";
+import PublicSchoolWebsite from "@/components/public/PublicSchoolWebsite";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/providers/AuthProvider";
-import type { Role } from "@/types";
+type HomePageProps = {
+  searchParams: Promise<{ school?: string | string[] }>;
+};
 
-const destinations: Record<Role, string> = { super_admin: "/super-admin", school_admin: "/school", teacher: "/teacher", student: "/student", parent: "/parent" };
+export default async function HomePage({ searchParams }: HomePageProps) {
+  const { school } = await searchParams;
+  const initialSchoolCode = Array.isArray(school) ? school[0] : school;
 
-export default function Home() {
-  const { user, loading } = useAuth(); const router = useRouter();
-  useEffect(() => { if (!loading) router.replace(user ? destinations[user.role] : "/login"); }, [loading, user, router]);
-  return <div className="loading-screen"><div className="loading-spinner" /><span>Preparing your workspace...</span></div>;
+  return <PublicSchoolWebsite key={initialSchoolCode ?? "default"} initialSchoolCode={initialSchoolCode} />;
 }
