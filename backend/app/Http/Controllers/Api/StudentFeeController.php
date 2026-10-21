@@ -19,7 +19,9 @@ class StudentFeeController extends Controller
             'status' => ['sometimes', Rule::in($this->statuses())],
             'due_date' => ['sometimes', 'date'],
         ]);
-        $query = StudentFee::with(['student.user', 'feeType', 'payments'])->where('school_id', $request->user()->school_id);
+        $query = StudentFee::with(['student.user', 'feeType', 'feeItem', 'payments', 'waivers'])
+            ->where('school_id', $request->user()->school_id)
+            ->whereHas('student', fn ($student) => $student->where('school_id', $request->user()->school_id));
         foreach (['student_id', 'fee_type_id', 'status', 'due_date'] as $filter) {
             if (array_key_exists($filter, $filters)) $query->where($filter, $filters[$filter]);
         }

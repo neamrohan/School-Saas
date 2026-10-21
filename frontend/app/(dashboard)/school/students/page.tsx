@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Filter, Pencil, Power, Plus, Search } from "lucide-react";
 import { api, ApiRequestError } from "@/lib/api";
 import { EmptyState, ErrorState, LoadingState, Notice } from "@/components/admin/AdminStates";
@@ -9,6 +10,8 @@ import { StudentForm, type StudentFormValues } from "@/components/admin/StudentF
 import type { AcademicYear, GroupTrade, SchoolClass, Section, Shift, Student, Version } from "@/types";
 
 export default function StudentsPage() {
+  const searchParams = useSearchParams();
+  const requestedView = searchParams.get("view");
   const [students, setStudents] = useState<Student[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
@@ -19,6 +22,11 @@ export default function StudentsPage() {
   const [search, setSearch] = useState("");
   const [classFilter, setClassFilter] = useState("");
   const [sectionFilter, setSectionFilter] = useState("");
+  const [sessionFilter, setSessionFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [totalStudents, setTotalStudents] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<Student | null>(null);
@@ -31,8 +39,14 @@ export default function StudentsPage() {
     setLoading(true);
     setError("");
     try {
+      const query = new URLSearchParams({ paginate: "1", per_page: "25", page: String(page) });
+      if (search.trim()) query.set("search", search.trim());
+      if (classFilter) query.set("class_id", classFilter);
+      if (sectionFilter) query.set("section_id", sectionFilter);
+      if (sessionFilter) query.set("academic_year_id", sessionFilter);
+      if (statusFilter) query.set("is_active", statusFilter);
       const [studentResult, classResult, sectionResult, yearResult, shiftResult, versionResult, groupResult] = await Promise.all([
-        api.get<{ students: Student[] }>("/students"),
+        api.get<{ students: { data: Student[]; last_page: number; total: number } }>(`/students?${query.toString()}`),
         api.get<{ classes: SchoolClass[] }>("/classes"),
         api.get<{ sections: Section[] }>("/sections"),
         api.get<{ academic_years: AcademicYear[] }>("/academic-years"),
@@ -40,7 +54,9 @@ export default function StudentsPage() {
         api.get<{ versions: Version[] }>("/versions"),
         api.get<{ groups: GroupTrade[] }>("/groups"),
       ]);
-      setStudents(studentResult.students);
+      setStudents(studentResult.students.data);
+      setLastPage(studentResult.students.last_page);
+      setTotalStudents(studentResult.students.total);
       setClasses(classResult.classes);
       setSections(sectionResult.sections);
       setAcademicYears(yearResult.academic_years);
@@ -52,20 +68,23 @@ export default function StudentsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [classFilter, page, search, sectionFilter, sessionFilter, statusFilter]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
   }, [load]);
 
-  const filtered = useMemo(() => {
-    const query = search.toLowerCase();
-    return students.filter((student) => [student.user?.name, student.user?.email, student.user?.username, student.student_id]
-      .some((value) => value?.toLowerCase().includes(query))
-      && (!classFilter || String(student.class_id) === classFilter)
-      && (!sectionFilter || String(student.section_id) === sectionFilter));
-  }, [students, search, classFilter, sectionFilter]);
+  useEffect(() => {
+    if (requestedView === "admission") {
+      const timer = window.setTimeout(() => {
+        setSelected(null);
+        setErrors(undefined);
+        setModal(true);
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [requestedView]);
 
   const openCreate = () => { setSelected(null); setErrors(undefined); setModal(true); };
   const openEdit = (student: Student) => { setSelected(student); setErrors(undefined); setModal(true); };
@@ -122,11 +141,13 @@ export default function StudentsPage() {
     {notice && <Notice message={notice} />}
     <section className="list-card">
       <div className="list-toolbar">
-        <label className="search-input"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, email, username, or Student ID" aria-label="Search students" /></label>
-        <label className="filter-select"><Filter size={16} /><select value={classFilter} onChange={(event) => { setClassFilter(event.target.value); setSectionFilter(""); }} aria-label="Filter by class"><option value="">All classes</option>{classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-        <label className="filter-select"><select value={sectionFilter} onChange={(event) => setSectionFilter(event.target.value)} aria-label="Filter by section"><option value="">All sections</option>{sections.filter((section) => !classFilter || String(section.school_class_id) === classFilter).map((section) => <option key={section.id} value={section.id}>{section.name}</option>)}</select></label>
+        <label className="search-input"><Search size={17} /><input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Search name, email, username, or Student ID" aria-label="Search students" /></label>
+        <label className="filter-select"><Filter size={16} /><select value={classFilter} onChange={(event) => { setPage(1); setClassFilter(event.target.value); setSectionFilter(""); }} aria-label="Filter by class"><option value="">All classes</option>{classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <label className="filter-select"><select value={sectionFilter} onChange={(event) => { setPage(1); setSectionFilter(event.target.value); }} aria-label="Filter by section"><option value="">All sections</option>{sections.filter((section) => !classFilter || String(section.school_class_id) === classFilter).map((section) => <option key={section.id} value={section.id}>{section.name}</option>)}</select></label>
+        <label className="filter-select"><select value={sessionFilter} onChange={(event) => { setPage(1); setSessionFilter(event.target.value); }} aria-label="Filter by academic session"><option value="">All sessions</option>{academicYears.map((year) => <option key={year.id} value={year.id}>{year.name}</option>)}</select></label>
+        <label className="filter-select"><select value={statusFilter} onChange={(event) => { setPage(1); setStatusFilter(event.target.value); }} aria-label="Filter by student status"><option value="">All statuses</option><option value="1">Active</option><option value="0">Inactive</option></select></label>
       </div>
-      {filtered.length ? <DataTable columns={[{ label: "Student", key: "student" }, { label: "Student ID", key: "student_code" }, { label: "Class / section", key: "placement" }, { label: "Roll", key: "roll" }, { label: "Status", key: "status" }, { label: "Actions", key: "actions" }]} rows={filtered.map((student) => {
+      {students.length ? <DataTable columns={[{ label: "Student", key: "student" }, { label: "Student ID", key: "student_code" }, { label: "Class / section", key: "placement" }, { label: "Roll", key: "roll" }, { label: "Status", key: "status" }, { label: "Actions", key: "actions" }]} rows={students.map((student) => {
         const isActive = student.user?.is_active !== false && student.is_active !== false;
         return {
           ...student,
@@ -137,7 +158,8 @@ export default function StudentsPage() {
           status: <span className={`status-badge ${isActive ? "status-active" : "status-inactive"}`}>{isActive ? "Active" : "Inactive"}</span>,
           actions: <div className="row-actions"><button onClick={() => openEdit(student)} aria-label="Edit student"><Pencil size={16} /></button><button className={isActive ? "row-danger" : ""} onClick={() => void toggleStatus(student)} aria-label={isActive ? "Deactivate student" : "Activate student"} title={isActive ? "Deactivate student" : "Activate student"}><Power size={16} /></button></div>,
         };
-      })} /> : <EmptyState title="No students found" copy={students.length ? "Try a different search or filter." : "Create a student account to begin."} />}
+      })} /> : <EmptyState title="No students found" copy="Try a different search or filter." />}
+      <div className="report-filter-actions"><span className="report-filter-hint">{totalStudents} students · Page {page} of {lastPage}</span><button className="secondary-button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</button><button className="secondary-button" disabled={page >= lastPage} onClick={() => setPage((current) => current + 1)}>Next</button></div>
     </section>
     {modal && <div className="dialog-backdrop"><div className="form-dialog"><div className="dialog-header"><p className="kicker">{selected ? "Edit account" : "New account"}</p><h2>{selected ? "Edit student" : "Add a student"}</h2></div><StudentForm student={selected} classes={classes} sections={sections} academicYears={academicYears} shifts={shifts} versions={versions} groups={groups} busy={busy} errors={errors} onSubmit={save} onCancel={() => setModal(false)} /></div></div>}
   </>;

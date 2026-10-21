@@ -108,4 +108,14 @@ class Student extends Model
     {
         return $this->hasMany(Payment::class);
     }
+
+    public function reAdmissions(): HasMany
+    {
+        return $this->hasMany(StudentReAdmission::class);
+    }
+
+    public function waivers(): HasMany
+    {
+        return $this->hasMany(StudentWaiver::class);
+    }
 }

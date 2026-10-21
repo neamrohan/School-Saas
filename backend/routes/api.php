@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\SchoolWebsiteSettingsController;
 use App\Http\Controllers\Api\SectionController;
 use App\Http\Controllers\Api\ShiftController;
 use App\Http\Controllers\Api\StudentController;
+use App\Http\Controllers\Api\StudentInformationController;
 use App\Http\Controllers\Api\StudentFeeController;
 use App\Http\Controllers\Api\StudentPortalController;
 use App\Http\Controllers\Api\SubjectController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\Api\TeacherAssignmentController;
 use App\Http\Controllers\Api\TeacherController;
 use App\Http\Controllers\Api\TeacherPortalController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\WaiverController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -39,6 +41,10 @@ Route::get('/public/schools', [SchoolWebsiteSettingsController::class, 'publicSc
 Route::get('/public/schools/{schoolCode}/website', [SchoolWebsiteSettingsController::class, 'showPublic']);
 Route::get('/public/schools/{schoolCode}/sliders', [SchoolHomepageSliderController::class, 'publicForSchool']);
 Route::post('/public/schools/{schoolCode}/contact', [SchoolContactMessageController::class, 'storePublic'])->middleware('throttle:5,1');
+Route::get('/public/schools/{schoolCode}/admission-options/academic-years', [StudentInformationController::class, 'admissionAcademicYears']);
+Route::get('/public/schools/{schoolCode}/admission-options/classes', [StudentInformationController::class, 'admissionClasses']);
+Route::get('/public/schools/{schoolCode}/admission-options/sections', [StudentInformationController::class, 'admissionSections']);
+Route::post('/public/schools/{schoolCode}/admissions', [StudentInformationController::class, 'applyOnline'])->middleware('throttle:5,1');
 
 Route::middleware(['auth:sanctum', 'active_account'])->group(function () {
 
@@ -124,6 +130,14 @@ Route::middleware(['auth:sanctum', 'active_account'])->group(function () {
         Route::get('/reports/attendance', [ReportController::class, 'attendance'])->middleware('school_admin');
         Route::get('/reports/fees', [ReportController::class, 'fees'])->middleware('school_admin');
         Route::get('/reports/results', [ReportController::class, 'results'])->middleware('school_admin');
+        Route::middleware('school_admin')->prefix('reports')->group(function (): void {
+            Route::get('/admissions', [ReportController::class, 'admissions']);
+            Route::get('/admission-collections', [ReportController::class, 'admissionCollections']);
+            Route::get('/collections', [ReportController::class, 'collections']);
+            Route::get('/monthly-collections', [ReportController::class, 'monthlyCollections']);
+            Route::get('/cash-book', [ReportController::class, 'cashBook']);
+            Route::get('/bank-book', [ReportController::class, 'bankBook']);
+        });
 
         // Attendance Management
         Route::get('/attendance/students', [AttendanceController::class, 'students']);
@@ -160,7 +174,18 @@ Route::middleware(['auth:sanctum', 'active_account'])->group(function () {
             Route::apiResource('teachers', TeacherController::class);
 
             // Student Management
+            Route::get('/online-admissions', [StudentInformationController::class, 'applications']);
+            Route::patch('/online-admissions/{application}/review', [StudentInformationController::class, 'reviewApplication']);
+            Route::get('/student-re-admissions', [StudentInformationController::class, 'reAdmissions']);
+            Route::post('/students/{student}/re-admit', [StudentInformationController::class, 'reAdmit']);
+            Route::post('/students/bulk-update', [StudentInformationController::class, 'bulkUpdate']);
             Route::apiResource('students', StudentController::class);
+            Route::get('/waiver-types', [WaiverController::class, 'types']);
+            Route::post('/waiver-types', [WaiverController::class, 'storeType']);
+            Route::put('/waiver-types/{waiverType}', [WaiverController::class, 'updateType']);
+            Route::get('/student-waivers', [WaiverController::class, 'history']);
+            Route::post('/student-waivers', [WaiverController::class, 'assign']);
+            Route::post('/student-waivers/{waiver}/revoke', [WaiverController::class, 'revoke']);
 
             // Class Management
             Route::apiResource('classes', SchoolClassController::class);

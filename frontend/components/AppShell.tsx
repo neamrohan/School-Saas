@@ -19,7 +19,22 @@ const nav: Record<Role, NavEntry[]> = {
       { label: "Contact messages", href: "/school/website-management/contact-messages" },
     ] },
     { label: "Teachers", href: "/school/teachers", icon: Users },
-    { label: "Students", href: "/school/students", icon: GraduationCap },
+    { label: "Student Information", icon: GraduationCap, children: [
+      { label: "Admission", href: "/school/students?view=admission" },
+      { label: "Online Admission", href: "/school/online-admissions" },
+      { label: "Student Details", href: "/school/students" },
+      { label: "Re-Admission", href: "/school/re-admissions" },
+      { label: "Bulk Profile Update", href: "/school/students/bulk-update" },
+      { label: "Bulk Payment Setup", href: "/school/fees?tab=generate" },
+      { label: "Quick Payment", href: "/school/payments?tab=quick-payment" },
+      { label: "Customer Payment", href: "/school/payments?tab=customer-payment" },
+      { label: "Customer", href: "/school/parents?view=customers" },
+      { label: "Payment List", href: "/school/payments?tab=payment-list" },
+      { label: "Due List", href: "/school/payments?tab=due-list" },
+      { label: "Waiver Type", href: "/school/waivers/types" },
+      { label: "Student Waiver", href: "/school/waivers/assign" },
+      { label: "Waiver History", href: "/school/waivers/history" },
+    ] },
     { label: "Parents", href: "/school/parents", icon: Users },
     {
       label: "Academics",
@@ -42,22 +57,36 @@ const nav: Record<Role, NavEntry[]> = {
       ],
     },
     { label: "Attendance", href: "/school/attendance", icon: CalendarDays },
-    { label: "Exams & Results", href: "/school/exams", icon: BarChart3 },
+    { label: "Exams & Results", icon: BarChart3, children: [
+      { label: "Exam Type", href: "/school/exam-tools/exam-type" },
+      { label: "Exam", href: "/school/exams" },
+      { label: "Exam Routine", href: "/school/exam-tools/exam-routine" },
+      { label: "Exam Seat", href: "/school/exam-tools/exam-seat" },
+      { label: "Admit Card", href: "/school/exam-tools/admit-card" },
+    ] },
     { label: "Exam Subject", href: "/school/exam-subjects", icon: BarChart3 },
     { label: "Marks", href: "/school/marks", icon: BarChart3 },
     { label: "Results", href: "/school/results", icon: BarChart3 },
-    { label: "Fees & Payments", icon: CreditCard, children: [
+    { label: "Item Setup", icon: CreditCard, children: [
       { label: "Category", href: "/school/fees?tab=categories" },
       { label: "Item", href: "/school/fees?tab=items" },
       { label: "Item Pricing", href: "/school/fees?tab=pricing" },
       { label: "Monthly Item Setup", href: "/school/fees?tab=monthly" },
       { label: "Generate Student Due", href: "/school/fees?tab=generate" },
-      { label: "Quick Payment", href: "/school/payments?tab=quick-payment" },
-      { label: "Customer Payment", href: "/school/payments?tab=customer-payment" },
-      { label: "Payment List", href: "/school/payments?tab=payment-list" },
-      { label: "Due List", href: "/school/payments?tab=due-list" },
     ] },
-    { label: "Reports", href: "/school/reports", icon: BarChart3 },
+    { label: "Reports", icon: BarChart3, children: [
+      { label: "Admission, Session Counting Reports", href: "/school/reports/admission-session-counting" },
+      { label: "Admission Collection Reports", href: "/school/reports/admission-collection" },
+      { label: "Student Collection Reports", href: "/school/reports/student-collection" },
+      { label: "Student Monthly Collection Reports", href: "/school/reports/student-monthly-collection" },
+      { label: "Student Attendance Reports", href: "/school/reports/student-attendance" },
+      { label: "SMS Reports", href: "/school/reports/sms" },
+      { label: "Expense Reports", href: "/school/reports/expenses" },
+      { label: "Income Reports", href: "/school/reports/income" },
+      { label: "Cash Book Reports", href: "/school/reports/cash-book" },
+      { label: "Bank Book Reports", href: "/school/reports/bank-book" },
+      { label: "Account Clearance Reports", href: "/school/reports/account-clearance" },
+    ] },
     { label: "Profile", href: "/profile", icon: GraduationCap },
   ],
   teacher: [{ label: "Dashboard", href: "/teacher", icon: LayoutDashboard }, { label: "My Classes", href: "/teacher/classes", icon: School }, { label: "My Subjects", href: "/teacher/subjects", icon: BookOpen }, { label: "Attendance", href: "/teacher/attendance", icon: CalendarDays }, { label: "Marks", href: "/teacher/marks", icon: BarChart3 }, { label: "Routine", href: "/teacher/routine", icon: CalendarDays }, { label: "Profile", href: "/teacher/profile", icon: GraduationCap }],
@@ -67,7 +96,12 @@ const nav: Record<Role, NavEntry[]> = {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth(); const router = useRouter(); const pathname = usePathname(); const searchParams = useSearchParams(); const [open, setOpen] = useState(false);
-  const [sections, setSections] = useState<Record<string, boolean>>({ Academics: true, "Fees & Payments": true, "Website Management": true });
+  const [sections, setSections] = useState<Record<string, boolean>>(() => ({
+    Academics: true,
+    "Fees & Payments": true,
+    "Website Management": true,
+    Reports: pathname.startsWith("/school/reports"),
+  }));
   if (!user) return null;
   const items = nav[user.role];
   const currentQuery = searchParams.toString();
@@ -76,6 +110,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const [targetPath, targetQuery] = href.split("?");
     if (targetQuery) return pathname === targetPath && currentQuery === targetQuery;
     if (["/school", "/student", "/teacher", "/super-admin", "/parent"].includes(targetPath)) return pathname === targetPath;
+    if (targetPath === "/school/students") return pathname === targetPath || /^\/school\/students\/\d+$/.test(pathname);
     return pathname === targetPath || pathname.startsWith(`${targetPath}/`);
   };
   const page = items.flatMap((item) => item.children ?? [item]).find((item) => isActive(item.href))?.label ?? "Overview";

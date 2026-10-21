@@ -23,4 +23,5 @@ class StudentFee extends Model
     public function class(): BelongsTo { return $this->belongsTo(SchoolClass::class, 'class_id'); }
     public function section(): BelongsTo { return $this->belongsTo(Section::class); }
     public function payments(): HasMany { return $this->hasMany(Payment::class); }
+    public function waivers(): HasMany { return $this->hasMany(StudentWaiver::class); }
 }

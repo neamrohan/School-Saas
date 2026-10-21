@@ -6,7 +6,7 @@ import { api, ApiRequestError } from "@/lib/api";
 import { EmptyState, ErrorState, LoadingState, Notice } from "@/components/admin/AdminStates";
 import type { Student } from "@/types";
 
-type Fee = { id: number; amount: string; status: string; student?: Student; feeType?: { name: string }; feeItem?: { name: string }; payments?: Array<{ amount: string }> };
+type Fee = { id: number; amount: string; status: string; student?: Student; feeType?: { name: string }; feeItem?: { name: string }; payments?: Array<{ amount: string }>; waivers?: Array<{ amount: string; status: string }> };
 type Payment = { id: number; amount: string; payment_date: string; payment_method: string; student?: Student; studentFee?: Fee };
 type PaymentView = "quick-payment" | "customer-payment" | "payment-list" | "due-list";
 
@@ -42,7 +42,12 @@ export default function PaymentsPage() {
     }).finally(() => setLoading(false));
   }, []);
 
-  const selectedFees = fees.filter((fee) => String(fee.student?.id) === studentId && fee.status !== "paid");
+  const dueAmount = (fee: Fee) => {
+    const paid = fee.payments?.reduce((sum, payment) => sum + Number(payment.amount), 0) ?? 0;
+    const waived = fee.waivers?.filter((waiver) => waiver.status === "active").reduce((sum, waiver) => sum + Number(waiver.amount), 0) ?? 0;
+    return Math.max(0, Number(fee.amount) - paid - waived);
+  };
+  const selectedFees = fees.filter((fee) => String(fee.student?.id) === studentId && dueAmount(fee) > 0);
 
   async function pay(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,7 +65,11 @@ export default function PaymentsPage() {
       setPayments((current) => [result.payment, ...current]);
       setNotice("Payment recorded successfully.");
       setAmount("");
-      setFees((current) => current.map((item) => item.id === fee?.id ? { ...item, status: "partial" } : item));
+      setFees((current) => current.map((item) => item.id === fee?.id ? {
+        ...item,
+        status: result.payment.studentFee?.status ?? "partial",
+        payments: [...(item.payments ?? []), { amount }],
+      } : item));
     } catch (cause) {
       setError(cause instanceof ApiRequestError ? cause.message : "Unable to record payment.");
     } finally {
@@ -80,6 +89,7 @@ export default function PaymentsPage() {
     </section>
     {notice && <Notice message={notice} />}
     {error && <p className="field-error">{error}</p>}
+    {view === "customer-payment" && <p className="report-limitation">Customer payments use the existing student-fee ledger. This project does not yet have independent customer receivables.</p>}
     {paymentEntry && <section className="list-card">
       <h3>{heading}</h3>
       <form className="school-form" onSubmit={pay}>
@@ -98,9 +108,10 @@ export default function PaymentsPage() {
     </section>}
     {view === "due-list" && <section className="list-card">
       <h3>Due List</h3>
-      {fees.filter((fee) => fee.status !== "paid").length ? fees.filter((fee) => fee.status !== "paid").map((fee) => {
+      {fees.filter((fee) => dueAmount(fee) > 0).length ? fees.filter((fee) => dueAmount(fee) > 0).map((fee) => {
         const paid = fee.payments?.reduce((sum, payment) => sum + Number(payment.amount), 0) ?? 0;
-        return <div className="list-toolbar" key={fee.id}><span>{fee.student?.user?.name} · {fee.feeItem?.name ?? fee.feeType?.name}</span><span>Total {fee.amount} · Paid {paid.toFixed(2)} · Due {(Number(fee.amount) - paid).toFixed(2)}</span></div>;
+        const waived = fee.waivers?.filter((waiver) => waiver.status === "active").reduce((sum, waiver) => sum + Number(waiver.amount), 0) ?? 0;
+        return <div className="list-toolbar" key={fee.id}><span>{fee.student?.user?.name} · {fee.feeItem?.name ?? fee.feeType?.name}</span><span>Total {fee.amount} · Paid {paid.toFixed(2)} · Waived {waived.toFixed(2)} · Due {dueAmount(fee).toFixed(2)}</span></div>;
       }) : <EmptyState title="No dues" copy="Student dues will appear here." />}
     </section>}
   </>;

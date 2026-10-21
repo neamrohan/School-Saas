@@ -25,10 +25,31 @@ class StudentController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $students = Student::with(self::PROFILE_RELATIONS)
-            ->where('school_id', $request->user()->school_id)
-            ->latest()
-            ->get();
+        $filters = $request->validate([
+            'search' => ['sometimes', 'string', 'max:100'],
+            'class_id' => ['sometimes', 'integer'],
+            'section_id' => ['sometimes', 'integer'],
+            'academic_year_id' => ['sometimes', 'integer'],
+            'is_active' => ['sometimes', 'boolean'],
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+        ]);
+        $query = Student::with(self::PROFILE_RELATIONS)->where('school_id', $request->user()->school_id)
+            ->when(isset($filters['class_id']), fn ($students) => $students->where('class_id', $filters['class_id']))
+            ->when(isset($filters['section_id']), fn ($students) => $students->where('section_id', $filters['section_id']))
+            ->when(isset($filters['academic_year_id']), fn ($students) => $students->where('academic_year_id', $filters['academic_year_id']))
+            ->when(isset($filters['is_active']), fn ($students) => $students->where('is_active', $filters['is_active']))
+            ->when(isset($filters['search']), fn ($students) => $students->where(function ($search) use ($filters): void {
+                $term = '%'.$filters['search'].'%';
+                $search->where('student_id', 'like', $term)
+                    ->orWhereHas('user', fn ($user) => $user->where('name', 'like', $term)
+                        ->orWhere('email', 'like', $term)->orWhere('username', 'like', $term));
+            }))
+            ->latest();
+
+        $students = $request->boolean('paginate')
+            ? $query->paginate($filters['per_page'] ?? 25)
+            : $query->get();
 
         return response()->json(['students' => $students]);
     }
